@@ -1,0 +1,45 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30104.148
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{7EA9E1FD-64D1-4AEB-AB3E-8D1A40060FAE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RabbitSharp.Slack.EventHandler.AspNetCore", "libraries\RabbitSharp.Slack.EventHandler.AspNetCore\RabbitSharp.Slack.EventHandler.AspNetCore.csproj", "{A228B091-6D60-4010-8D7F-D439422292ED}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RabbitSharp.Slack.EventHandler.AspNetCore.Test", "tests\RabbitSharp.Slack.EventHandler.AspNetCore.Test\RabbitSharp.Slack.EventHandler.AspNetCore.Test.csproj", "{321829F6-5107-48FE-8B1C-2099DE21C19C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{DC4FC827-10ED-45E8-8E43-DF64D9963DCE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleEventHandler", "samples\SimpleEventHandler\SimpleEventHandler.csproj", "{13AF2322-79A3-4DDB-A530-2C6D6DE9B57A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A228B091-6D60-4010-8D7F-D439422292ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A228B091-6D60-4010-8D7F-D439422292ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A228B091-6D60-4010-8D7F-D439422292ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A228B091-6D60-4010-8D7F-D439422292ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{321829F6-5107-48FE-8B1C-2099DE21C19C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{321829F6-5107-48FE-8B1C-2099DE21C19C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{321829F6-5107-48FE-8B1C-2099DE21C19C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{321829F6-5107-48FE-8B1C-2099DE21C19C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13AF2322-79A3-4DDB-A530-2C6D6DE9B57A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13AF2322-79A3-4DDB-A530-2C6D6DE9B57A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13AF2322-79A3-4DDB-A530-2C6D6DE9B57A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13AF2322-79A3-4DDB-A530-2C6D6DE9B57A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{321829F6-5107-48FE-8B1C-2099DE21C19C} = {7EA9E1FD-64D1-4AEB-AB3E-8D1A40060FAE}
+		{13AF2322-79A3-4DDB-A530-2C6D6DE9B57A} = {DC4FC827-10ED-45E8-8E43-DF64D9963DCE}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4A16EDDF-40E9-4B7D-BBB9-E66F7B4CC7FE}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,11 @@
+<Project>
+
+  <PropertyGroup>
+    <LangVersion>8.0</LangVersion>
+    <DebugType>pdbonly</DebugType>
+    <Nullable>enable</Nullable>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <RootNamespace>RabbitSharp.Slack.Events.Tests</RootNamespace>
+  </PropertyGroup>
+
+</Project>
