@@ -11,7 +11,7 @@
   <PropertyGroup>
     <PackageId>RabbitSharp.Slack.EventHandler.AspNetCore</PackageId>
     <PackageTags>slack;event-api;aspnetcore;.net;core;event;handler</PackageTags>
-    <Description>Provides lightweight ASP.NET Core middleware which receives Slack Events API requests and re-execute them in alternative request pipelines by convention.</Description>
+    <Description>Provides lightweight ASP.NET Core middleware which receives Slack Events API requests, redirects them or re-executes them in alternative request pipelines by convention.</Description>
   </PropertyGroup>
 
   <ItemGroup>

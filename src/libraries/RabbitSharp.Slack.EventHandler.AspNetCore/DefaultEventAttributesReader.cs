@@ -15,14 +15,19 @@ namespace RabbitSharp.Slack.Events
         private readonly JsonSerializerOptions _serializerOptions;
         private readonly Dictionary<Type, object> _objectCache;
 
-        public DefaultEventAttributesReader(ISlackEventHandlerServicesFeature services)
+        public DefaultEventAttributesReader(ISlackEventHandlerServicesFeature feature)
         {
-            _serializerOptions = services.SerializerOptions;
+            _serializerOptions = feature.SerializerOptions;
             _objectCache = new Dictionary<Type, object>();
         }
 
         public async ValueTask<T> ReadAsync<T>(EventAttributesReaderContext context)
         {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
             if (!string.Equals(
                 context.HttpContext.Request.ContentType,
                 ContentTypeApplicationJson,

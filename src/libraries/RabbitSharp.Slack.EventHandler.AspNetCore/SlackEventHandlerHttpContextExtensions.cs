@@ -13,60 +13,11 @@ namespace RabbitSharp.Slack.Events
         private const string SlackRequestVerificationResultKey = "__SlackRequestVerificationResult";
 
         /// <summary>
-        /// Gets <see cref="ISlackEventHandlerServicesFeature"/> provisioned by <see cref="SlackEventHandlerMiddleware"/>.
-        /// </summary>
-        /// <param name="httpContext">The HTTP context.</param>
-        internal static ISlackEventHandlerFeature GetSlackEventHandlerFeature(
-            this HttpContext httpContext)
-        {
-            if (httpContext == null)
-            {
-                throw new ArgumentNullException(nameof(httpContext));
-            }
-
-            var feature = httpContext.Features.Get<ISlackEventHandlerFeature>();
-            if (feature == null)
-            {
-                throw new InvalidOperationException(
-                    "No feature found. Have you added SlackEventHandlerMiddleware?");
-            }
-
-            return feature;
-        }
-
-        /// <summary>
-        /// Gets <see cref="ISlackEventHandlerServicesFeature"/> provisioned by <see cref="SlackEventHandlerMiddleware"/>.
-        /// </summary>
-        /// <param name="httpContext">The HTTP context.</param>
-        internal static ISlackEventHandlerServicesFeature GetSlackEventHandlerServicesFeature(
-            this HttpContext httpContext)
-        {
-            if (httpContext == null)
-            {
-                throw new ArgumentNullException(nameof(httpContext));
-            }
-
-            var feature = httpContext.Features.Get<ISlackEventHandlerServicesFeature>();
-            if (feature == null)
-            {
-                throw new InvalidOperationException(
-                    "No feature found. Have you added SlackEventHandlerMiddleware?");
-            }
-
-            return feature;
-        }
-
-        /// <summary>
         /// Gets the instance of Slack request validator for verifying requests from Slack.
         /// </summary>
         /// <param name="httpContext">The HTTP context.</param>
         internal static ISlackRequestValidator GetSlackRequestValidator(this HttpContext httpContext)
         {
-            if (httpContext == null)
-            {
-                throw new ArgumentNullException(nameof(httpContext));
-            }
-
             // If there is feature, the validator should have been provisioned
             var validator = httpContext.Features.Get<ISlackEventHandlerServicesFeature>()?.RequestValidator;
             if (validator != null)
@@ -77,7 +28,7 @@ namespace RabbitSharp.Slack.Events
             // Otherwise, try get cached validator
             if (httpContext.Items.TryGetValue(typeof(ISlackRequestValidator), out var validatorObj))
             {
-                return (ISlackRequestValidator) validatorObj;
+                return (ISlackRequestValidator) validatorObj!;
             }
 
             // If no cached, create a new instance and cache it
@@ -93,17 +44,24 @@ namespace RabbitSharp.Slack.Events
         /// </summary>
         public static async ValueTask<bool> VerifySlackRequestAsync(this HttpContext httpContext)
         {
+            var feature = httpContext.Features.Get<ISlackRequestVerificationFeature>();
+            if (feature == null)
+            {
+                throw new InvalidOperationException(
+                    "No feature found. Have you added SlackEventHandlerMiddleware?");
+            }
+
             bool verificationResult;
             if (httpContext.Items.ContainsKey(SlackRequestVerificationResultKey))
             {
                 // Previously verified
-                verificationResult = (bool) httpContext.Items[SlackRequestVerificationResultKey];
+                verificationResult = (bool) httpContext.Items[SlackRequestVerificationResultKey]!;
             }
             else
             {
                 while (true)
                 {
-                    var parameters = httpContext.GetSlackEventHandlerFeature().Options.RequestValidationParameters;
+                    var parameters = feature.Parameters;
                     if (parameters == null)
                     {
                         // There is no way to validate the request, so trust it.

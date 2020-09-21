@@ -10,15 +10,15 @@ namespace RabbitSharp.Slack.Events
     /// Handles URL verification handshake according to Slack API documentation at
     /// https://api.slack.com/events-api#the-events-api__subscribing-to-event-types__events-api-request-urls__request-url-configuration--verification.
     /// </summary>
-    public class UrlVerificationEventHandler : ISlackEventHandler
+    class UrlVerificationEventHandler : ISlackEventHandler
     {
-        /// <summary>
-        /// Verifies the request is from Slack and is of <c>url_verification</c> type, then
-        /// responds to the challenge.
-        /// </summary>
-        /// <param name="context">The event context.</param>
-        public async ValueTask HandleAsync(SlackEventContext context)
+        public async ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
         {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
             var httpContext = context.HttpContext;
             var request = httpContext.Request;
 
@@ -28,16 +28,14 @@ namespace RabbitSharp.Slack.Events
                 ContentTypeApplicationJson,
                 StringComparison.OrdinalIgnoreCase))
             {
-                context.NoResult();
-                return;
+                return SlackEventHandlerResult.NoResult();
             }
 
             // Read event content
             var content = await context.ReadEventAttributes<UrlVerification?>();
             if (content == null)
             {
-                context.NoResult();
-                return;
+                return SlackEventHandlerResult.NoResult();
             }
 
             // Verify the event type
@@ -46,15 +44,13 @@ namespace RabbitSharp.Slack.Events
                 EventTypeUrlVerification,
                 StringComparison.OrdinalIgnoreCase))
             {
-                context.NoResult();
-                return;
+                return SlackEventHandlerResult.NoResult();
             }
 
-            httpContext.Response.Clear();
             httpContext.Response.StatusCode = StatusCodes.Status200OK;
             httpContext.Response.ContentType = ContentTypePlainText;
             await httpContext.Response.WriteAsync(content.Challenge);
-            context.EndResponse();
+            return SlackEventHandlerResult.EndResponse();
         }
     }
 }

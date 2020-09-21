@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace RabbitSharp.Slack.Events
 {
@@ -25,6 +26,8 @@ namespace RabbitSharp.Slack.Events
             {
                 HttpMethods.Post
             };
+
+            InternalLogLevel = LogLevel.Trace;
         }
 
         /// <summary>
@@ -35,6 +38,12 @@ namespace RabbitSharp.Slack.Events
         /// Slack API portal.
         /// </summary>
         public PathString CallbackPath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="LogLevel"/> used by the internal logger. Default value is
+        /// <see cref="LogLevel.Trace"/>.
+        /// </summary>
+        public LogLevel InternalLogLevel { get; set; }
 
         /// <summary>
         /// Gets a list of allowed HTTP verbs. By default, only HTTP Post requests are allowed.

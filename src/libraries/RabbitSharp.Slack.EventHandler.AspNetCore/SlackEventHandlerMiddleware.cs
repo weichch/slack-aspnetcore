@@ -2,9 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 
 namespace RabbitSharp.Slack.Events
 {
@@ -17,18 +20,34 @@ namespace RabbitSharp.Slack.Events
     {
         private readonly RequestDelegate _next;
         private readonly SlackEventHandlerOptions _options;
+        private readonly ILogger _logger;
+        private readonly LogLevel _logLevel;
 
         /// <summary>
         /// Creates an instance of the middleware.
         /// </summary>
         /// <param name="next">The next request handler in the request pipeline.</param>
         /// <param name="options">The middleware settings.</param>
+        /// <param name="loggerFactory">The logger factory.</param>
         public SlackEventHandlerMiddleware(
             RequestDelegate next, 
-            IOptions<SlackEventHandlerOptions> options)
+            IOptions<SlackEventHandlerOptions> options,
+            ILoggerFactory loggerFactory)
         {
-            _next = next;
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
+            if (loggerFactory == null)
+            {
+                throw new ArgumentNullException(nameof(loggerFactory));
+            }
+
+            _next = next ?? throw new ArgumentNullException(nameof(next));
             _options = options.Value;
+            _logger = loggerFactory.CreateLogger<SlackEventHandlerMiddleware>();
+            _logLevel = _options.InternalLogLevel;
         }
 
         /// <summary>
@@ -56,8 +75,10 @@ namespace RabbitSharp.Slack.Events
         /// <param name="httpContext">The HTTP context.</param>
         private async Task HandleSlackEvent(HttpContext httpContext)
         {
-            // Sets services required by request validator and event handlers to feature 
-            ProvisionFeatures(httpContext);
+            // Prepare HTTP context for Slack event handlers
+            httpContext.Response.Clear();
+            httpContext.Response.OnStarting(SetNoCacheHeaders, httpContext.Response);
+            var feature = ProvisionFeatures(httpContext);
 
             // Buffer the request body
             var request = httpContext.Request;
@@ -66,62 +87,61 @@ namespace RabbitSharp.Slack.Events
             // Verify the content is from Slack
             if (!await httpContext.VerifySlackRequestAsync())
             {
+                _logger.Log(_logLevel, "Failed to verify a request from Slack.");
                 return;
             }
-            
+
             // Handle request in event handlers
-            var eventContext = new SlackEventContext(httpContext);
+            var eventContext = new SlackEventContext(httpContext, feature.AttributesReader);
+            SlackEventHandlerResult result = default;
+
             foreach (var eventHandler in _options.EventsHandlers)
             {
                 try
                 {
-                    await eventHandler.HandleAsync(eventContext);
+                    result = await eventHandler.HandleAsync(eventContext);
+                    if (result.IsHandled)
+                    {
+                        break;
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
                     // If there is any error in the handler we skip the handler
                     // In the future we might be able to expose the exceptions
                     // to somewhere but it's out of scope for now
-                    eventContext.NoResult();
-                }
-
-                switch (eventContext.Result)
-                {
-                    case SlackEventHandling.None:
-                        continue;
-
-                    case SlackEventHandling.Redirect:
-                        httpContext.Response.Clear();
-                        HandleRedirect(httpContext, eventContext);
-                        return;
-
-                    case SlackEventHandling.Rewrite:
-                        httpContext.Response.Clear();
-                        await HandleRewrite(httpContext, eventContext);
-                        return;
-
-                    case SlackEventHandling.EndResponse:
-                        return;
+                    _logger.Log(_logLevel, ex, "Unhandled exception occurred in event handler.");
                 }
             }
 
-            // Handle event using fallback response factory
-            if (_options.FallbackResponseFactory != null)
+            if (result.IsHandled)
             {
-                await _options.FallbackResponseFactory(httpContext);
-                return;
+                if (result.IsRedirect)
+                {
+                    HandleRedirect(httpContext, result);
+                }
+                else if (result.IsRewrite)
+                {
+                    await HandleRewrite(httpContext, result);
+                }
             }
-
-            // If the event request can't be handled, continue in next request handler
-            // This may lead to an HTTP 404 error depends on if there is endpoint or not
-            await _next(httpContext);
+            else if (_options.FallbackResponseFactory != null)
+            {
+                // Handle by fallback response factory
+                await _options.FallbackResponseFactory(httpContext);
+            }
+            else
+            {
+                // If the event request can't be handled, end the request
+                _logger.Log(_logLevel, "Unable to handle a request from Slack.");
+            }
         }
 
         /// <summary>
         /// Sets per-request services used by request validator and event handlers.
         /// </summary>
         /// <param name="httpContext">The HTTP context.</param>
-        private void ProvisionFeatures(HttpContext httpContext)
+        private SlackEventHandlerFeature ProvisionFeatures(HttpContext httpContext)
         {
             var jsonSerializerOptions =
                 _options.DefaultSerializerOptions
@@ -138,13 +158,27 @@ namespace RabbitSharp.Slack.Events
             feature.AttributesReader = CreateEventAttributesReader(httpContext, feature);
 
             httpContext.Features.Set<ISlackEventHandlerServicesFeature>(feature);
+
+            return feature;
+        }
+
+        /// <summary>
+        /// Sets no cache headers to response.
+        /// </summary>
+        private static Task SetNoCacheHeaders(object state)
+        {
+            var headers = ((HttpResponse)state).Headers;
+            headers[HeaderNames.CacheControl] = "no-cache";
+            headers[HeaderNames.Pragma] = "no-cache";
+            headers[HeaderNames.Expires] = "-1";
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Creates <see cref="IEventAttributesReader"/>.
         /// </summary>
         private IEventAttributesReader CreateEventAttributesReader(
-            HttpContext httpContext, 
+            HttpContext httpContext,
             ISlackEventHandlerServicesFeature feature)
         {
             IEventAttributesReader reader;
@@ -181,15 +215,37 @@ namespace RabbitSharp.Slack.Events
         /// <summary>
         /// Handles redirect result.
         /// </summary>
-        private void HandleRedirect(HttpContext httpContext, SlackEventContext eventContext)
+        private void HandleRedirect(HttpContext httpContext, in SlackEventHandlerResult result)
         {
             httpContext.Response.StatusCode = _options.RedirectStatusCode;
-
+            result.ApplyTo(httpContext);
         }
 
-        private async Task HandleRewrite(HttpContext httpContext, SlackEventContext eventContext)
+        /// <summary>
+        /// Handles rewrite result.
+        /// </summary>
+        private Task HandleRewrite(HttpContext httpContext, in SlackEventHandlerResult result)
         {
+            // Clear HTTP context for rewrite
+            httpContext.SetEndpoint(null);
+            httpContext.Features.Get<IRouteValuesFeature>()?.RouteValues?.Clear();
 
+            result.ApplyTo(httpContext);
+
+            return Awaited(httpContext, _next, _options.CallbackPath);
+
+            static async Task Awaited(HttpContext httpContext, RequestDelegate next, PathString originalPath)
+            {
+                var request = httpContext.Request;
+                try
+                {
+                    await next(httpContext);
+                }
+                finally
+                {
+                    request.Path = originalPath;
+                }
+            }
         }
     }
 }

@@ -1,12 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace RabbitSharp.Slack.Events
 {
+    /// <summary>
+    /// Defines a type which handles event notification from Slack.
+    /// </summary>
     public interface ISlackEventHandler
     {
-        ValueTask HandleAsync(SlackEventContext context);
+        /// <summary>
+        /// Handles Slack event notification in a verified request context.
+        /// </summary>
+        /// <param name="context">The event context.</param>
+        ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context);
     }
 }
