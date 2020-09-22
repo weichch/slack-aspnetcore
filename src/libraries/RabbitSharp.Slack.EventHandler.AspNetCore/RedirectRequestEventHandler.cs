@@ -22,9 +22,9 @@ namespace RabbitSharp.Slack.Events
 
         public async ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
         {
-            var eventWrapper = await context.ReadEventAttributes<EventWrapper>();
+            var eventWrapper = await context.ReadEventAttributes<EventWrapper?>();
 
-            if (!_predicate(eventWrapper))
+            if (eventWrapper == null || !_predicate(eventWrapper))
             {
                 return SlackEventHandlerResult.NoResult();
             }

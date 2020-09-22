@@ -3,22 +3,22 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using static RabbitSharp.Slack.Events.SlackEventHandlerConstants;
 
 namespace RabbitSharp.Slack.Events
 {
     /// <summary>
     /// Implements <see cref="IEventAttributesReader"/> using <see cref="JsonSerializer"/>.
+    /// This implementation is per-request service.
     /// </summary>
     class DefaultEventAttributesReader : IEventAttributesReader
     {
         private readonly JsonSerializerOptions _serializerOptions;
-        private readonly Dictionary<Type, object> _objectCache;
+        private readonly Dictionary<Type, object?> _objectCache;
 
         public DefaultEventAttributesReader(ISlackEventHandlerServicesFeature feature)
         {
             _serializerOptions = feature.SerializerOptions;
-            _objectCache = new Dictionary<Type, object>();
+            _objectCache = new Dictionary<Type, object?>();
         }
 
         public async ValueTask<T> ReadAsync<T>(EventAttributesReaderContext context)
@@ -28,17 +28,9 @@ namespace RabbitSharp.Slack.Events
                 throw new ArgumentNullException(nameof(context));
             }
 
-            if (!string.Equals(
-                context.HttpContext.Request.ContentType,
-                ContentTypeApplicationJson,
-                StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Cannot read request content.");
-            }
-
             if (_objectCache.TryGetValue(typeof(T), out var resultObj))
             {
-                return (T) resultObj;
+                return (T) resultObj!;
             }
 
             var eventStream = context.Event;
@@ -47,10 +39,19 @@ namespace RabbitSharp.Slack.Events
                 eventStream.Seek(0, SeekOrigin.Begin);
             }
 
-            var value = await JsonSerializer.DeserializeAsync<T>(
-                eventStream, _serializerOptions, context.CancellationToken);
-            _objectCache.Add(typeof(T), value!);
-            return value;
+            T value;
+            try
+            {
+                value = await JsonSerializer.DeserializeAsync<T>(
+                    eventStream, _serializerOptions, context.CancellationToken);
+            }
+            catch (JsonException)
+            {
+                value = default;
+            }
+
+            _objectCache.Add(typeof(T), value);
+            return value!;
         }
     }
 }

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.Routing.Patterns;
 using RabbitSharp.Slack.Events.Models;
 
 namespace RabbitSharp.Slack.Events
@@ -195,71 +193,11 @@ namespace RabbitSharp.Slack.Events
         /// </summary>
         /// <param name="options">The options.</param>
         /// <param name="predicate">The predicate function.</param>
-        /// <param name="pattern">The route template.</param>
-        /// <param name="routeValues">The route values.</param>
-        public static SlackEventHandlerOptions AddRewrite(
-            this SlackEventHandlerOptions options,
-            Predicate<EventWrapper> predicate,
-            string pattern,
-            object? routeValues)
-        {
-            return options.AddRewrite(predicate, pattern, _ => routeValues);
-        }
-
-        /// <summary>
-        /// Adds event handler which rewrites request to a new path within the base path of the application
-        /// when event meets criteria.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <param name="predicate">The predicate function.</param>
-        /// <param name="pattern">The route template.</param>
-        /// <param name="routeValuesProvider">The route values provider.</param>
-        public static SlackEventHandlerOptions AddRewrite(
-            this SlackEventHandlerOptions options,
-            Predicate<EventWrapper> predicate,
-            string pattern,
-            Func<EventWrapper, object?> routeValuesProvider)
-        {
-            if (options == null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
-
-            if (predicate == null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
-
-            if (pattern == null)
-            {
-                throw new ArgumentNullException(nameof(pattern));
-            }
-
-            if (routeValuesProvider == null)
-            {
-                throw new ArgumentNullException(nameof(routeValuesProvider));
-            }
-
-            options.EventsHandlers.Add(new RewriteRequestEventHandler(
-                predicate, (context, evt) =>
-                    context.RoutePatternHelper.Format(
-                        context.HttpContext,
-                        RoutePatternFactory.Parse(pattern),
-                        routeValuesProvider(evt))));
-            return options;
-        }
-
-        /// <summary>
-        /// Adds event handler which rewrites request to a new path within the base path of the application
-        /// when event meets criteria.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <param name="predicate">The predicate function.</param>
         /// <param name="pathBuilder">The path builder.</param>
         public static SlackEventHandlerOptions AddRewrite(
             this SlackEventHandlerOptions options,
             Predicate<EventWrapper> predicate,
-            Func<LinkGenerator, EventWrapper, PathString> pathBuilder)
+            Func<SlackEventContext, EventWrapper, PathString> pathBuilder)
         {
             if (options == null)
             {
@@ -276,8 +214,8 @@ namespace RabbitSharp.Slack.Events
                 throw new ArgumentNullException(nameof(pathBuilder));
             }
 
-            options.EventsHandlers.Add(new RewriteRequestEventHandler(
-                predicate, (context, evt) => pathBuilder(context.LinkHelper, evt)));
+            options.EventsHandlers.Add(
+                new RewriteRequestEventHandler(predicate, pathBuilder));
             return options;
         }
 
@@ -302,47 +240,11 @@ namespace RabbitSharp.Slack.Events
         /// </summary>
         /// <param name="options">The options.</param>
         /// <param name="eventType">The target event type.</param>
-        /// <param name="pattern">The route template.</param>
-        /// <param name="routeValues">The route values.</param>
-        public static SlackEventHandlerOptions AddEventTypeRewrite(
-            this SlackEventHandlerOptions options,
-            string eventType,
-            string pattern,
-            object? routeValues)
-        {
-            return options.AddRewrite(evt => 
-                evt.IsOfType(eventType), pattern, routeValues);
-        }
-
-        /// <summary>
-        /// Adds event handler which rewrites request to a new path within the base path of the application
-        /// when event type is equal to specified event type.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <param name="eventType">The target event type.</param>
-        /// <param name="pattern">The route template.</param>
-        /// <param name="routeValuesProvider">The route values provider.</param>
-        public static SlackEventHandlerOptions AddEventTypeRewrite(
-            this SlackEventHandlerOptions options,
-            string eventType,
-            string pattern,
-            Func<EventWrapper, object?> routeValuesProvider)
-        {
-            return options.AddRewrite(evt => 
-                evt.IsOfType(eventType), pattern, routeValuesProvider);
-        }
-
-        /// <summary>
-        /// Adds event handler which rewrites request to a new path within the base path of the application
-        /// when event type is equal to specified event type.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <param name="eventType">The target event type.</param>
         /// <param name="pathBuilder">The path builder.</param>
         public static SlackEventHandlerOptions AddEventTypeRewrite(
             this SlackEventHandlerOptions options,
             string eventType,
-            Func<LinkGenerator, EventWrapper, PathString> pathBuilder)
+            Func<SlackEventContext, EventWrapper, PathString> pathBuilder)
         {
             return options.AddRewrite(evt => evt.IsOfType(eventType), pathBuilder);
         }

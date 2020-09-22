@@ -13,7 +13,6 @@ namespace RabbitSharp.Slack.Events
     public class SlackEventContext
     {
         private LinkGenerator? _linkGenerator;
-        private RoutePatternFormatter? _routePatternFormatter;
         private EventAttributesReaderContext? _readerContext;
 
         /// <summary>
@@ -43,12 +42,6 @@ namespace RabbitSharp.Slack.Events
         /// </summary>
         public LinkGenerator LinkHelper => _linkGenerator
             ??= HttpContext.RequestServices.GetRequiredService<LinkGenerator>();
-
-        /// <summary>
-        /// Gets an instance of <see cref="RoutePatternFormatter"/> for formatting route templates.
-        /// </summary>
-        public RoutePatternFormatter RoutePatternHelper => _routePatternFormatter
-            ??= ActivatorUtilities.CreateInstance<RoutePatternFormatter>(HttpContext.RequestServices);
 
         /// <summary>
         /// Reads event attributes.

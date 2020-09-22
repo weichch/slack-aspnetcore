@@ -9,21 +9,31 @@ namespace RabbitSharp.Slack.Events.Models
     public class UrlVerification
     {
         /// <summary>
+        /// Creates an instance of the event wrapper;
+        /// </summary>
+        public UrlVerification()
+        {
+            Token = string.Empty;
+            Challenge = string.Empty;
+            Type = string.Empty;
+        }
+
+        /// <summary>
         /// Gets or sets the <c>token</c> field.
         /// </summary>
         [JsonPropertyName("token")]
-        public string Token { get; set; } = null!;
+        public string Token { get; set; }
 
         /// <summary>
         /// Gets or sets the <c>challenge</c> field.
         /// </summary>
         [JsonPropertyName("challenge")]
-        public string Challenge { get; set; } = null!;
+        public string Challenge { get; set; }
 
         /// <summary>
         /// Gets or sets the <c>type</c> field.
         /// </summary>
         [JsonPropertyName("type")]
-        public string Type { get; set; } = null!;
+        public string Type { get; set; }
     }
 }

@@ -19,34 +19,14 @@ namespace RabbitSharp.Slack.Events
                 throw new ArgumentNullException(nameof(context));
             }
 
-            var httpContext = context.HttpContext;
-            var request = httpContext.Request;
-
-            // Verify the content type is JSON
-            if (!string.Equals(
-                request.ContentType,
-                ContentTypeApplicationJson,
-                StringComparison.OrdinalIgnoreCase))
-            {
-                return SlackEventHandlerResult.NoResult();
-            }
-
-            // Read event content
             var content = await context.ReadEventAttributes<UrlVerification?>();
-            if (content == null)
+            if (content == null
+                || !string.Equals(content.Type, EventTypeUrlVerification, StringComparison.OrdinalIgnoreCase))
             {
                 return SlackEventHandlerResult.NoResult();
             }
 
-            // Verify the event type
-            if (!string.Equals(
-                content.Type,
-                EventTypeUrlVerification,
-                StringComparison.OrdinalIgnoreCase))
-            {
-                return SlackEventHandlerResult.NoResult();
-            }
-
+            var httpContext = context.HttpContext;
             httpContext.Response.StatusCode = StatusCodes.Status200OK;
             httpContext.Response.ContentType = ContentTypePlainText;
             await httpContext.Response.WriteAsync(content.Challenge);

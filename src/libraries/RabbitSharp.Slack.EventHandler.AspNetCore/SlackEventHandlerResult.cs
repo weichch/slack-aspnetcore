@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 
@@ -114,7 +115,15 @@ namespace RabbitSharp.Slack.Events
         {
             var result = new SlackEventHandlerResult(
                 new List<Action<HttpContext>>(), false, true);
-            result.RegisterResultCallback(httpContext => httpContext.Request.Path = path);
+            result.RegisterResultCallback(httpContext =>
+            {
+                var request = httpContext.Request;
+                if (request.Body.CanSeek)
+                {
+                    request.Body.Seek(0, SeekOrigin.Begin);
+                }
+                request.Path = path;
+            });
             return result;
         }
 

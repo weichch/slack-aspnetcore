@@ -26,7 +26,10 @@ namespace RabbitSharp.Slack.Events
             {
                 HttpMethods.Post
             };
-
+            AllowedContentTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                SlackEventHandlerConstants.ContentTypeApplicationJson
+            };
             InternalLogLevel = LogLevel.Trace;
         }
 
@@ -46,9 +49,15 @@ namespace RabbitSharp.Slack.Events
         public LogLevel InternalLogLevel { get; set; }
 
         /// <summary>
-        /// Gets a list of allowed HTTP verbs. By default, only HTTP Post requests are allowed.
+        /// Gets a list of allowed HTTP verbs. By default, only HTTP POST requests are allowed.
         /// </summary>
-        public ISet<string> AllowedVerbs { get; set; }
+        public ISet<string> AllowedVerbs { get; }
+
+        /// <summary>
+        /// Gets a list of allowed <c>Content-Type</c> values. By default, only <c>application/json</c>
+        /// is allowed.
+        /// </summary>
+        public ISet<string> AllowedContentTypes { get; }
 
         /// <summary>
         /// Gets or sets the default settings for <see cref="System.Text.Json.JsonSerializer"/> used by
@@ -96,6 +105,6 @@ namespace RabbitSharp.Slack.Events
         /// <summary>
         /// Gets or sets the status code used when redirecting the response. Default value is <c>302 Found</c>.
         /// </summary>
-        public int RedirectStatusCode { get; }
+        public int RedirectStatusCode { get; set; }
     }
 }

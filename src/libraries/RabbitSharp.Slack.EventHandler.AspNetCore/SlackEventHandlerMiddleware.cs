@@ -1,9 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Net.Mime;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -57,11 +60,14 @@ namespace RabbitSharp.Slack.Events
         /// <param name="httpContext">The HTTP context.</param>
         public Task Invoke(HttpContext httpContext)
         {
-            var request = httpContext.Request;
-            if (_options.CallbackPath != request.Path
-                || httpContext.Response.HasStarted
-                || !_options.AllowedVerbs.Contains(request.Method))
+            if (_options.CallbackPath != httpContext.Request.Path)
             {
+                return _next(httpContext);
+            }
+            
+            if (httpContext.Response.HasStarted)
+            {
+                _logger.Log(_logLevel, "Unable to process request from Slack because response has started.");
                 return _next(httpContext);
             }
 
@@ -78,9 +84,14 @@ namespace RabbitSharp.Slack.Events
             // Prepare HTTP context for Slack event handlers
             httpContext.Response.Clear();
             httpContext.Response.OnStarting(SetNoCacheHeaders, httpContext.Response);
-            var feature = ProvisionFeatures(httpContext);
 
-            // Buffer the request body
+            // Ensure HTTP method and content type
+            if (!EnsureHttpMethodAndContentType(httpContext))
+            {
+                return;
+            }
+
+            var feature = ProvisionFeatures(httpContext);
             var request = httpContext.Request;
             request.EnableBuffering();
 
@@ -132,9 +143,43 @@ namespace RabbitSharp.Slack.Events
             }
             else
             {
-                // If the event request can't be handled, end the request
+                // If the event request can't be handled, end the request with an error code
                 _logger.Log(_logLevel, "Unable to handle a request from Slack.");
+                httpContext.Response.StatusCode = StatusCodes.Status421MisdirectedRequest;
             }
+        }
+
+        /// <summary>
+        /// Ensures the HTTP method and content type are allowed.
+        /// </summary>
+        private bool EnsureHttpMethodAndContentType(HttpContext httpContext)
+        {
+            var request = httpContext.Request;
+
+            if (!_options.AllowedVerbs.Contains(request.Method))
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+                return false;
+            }
+
+            bool contentTypeAllowed;
+            try
+            {
+                var contentType = new ContentType(request.ContentType);
+                contentTypeAllowed = _options.AllowedContentTypes.Contains(contentType.MediaType);
+            }
+            catch
+            {
+                contentTypeAllowed = false;
+            }
+
+            if (!contentTypeAllowed)
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -143,11 +188,11 @@ namespace RabbitSharp.Slack.Events
         /// <param name="httpContext">The HTTP context.</param>
         private SlackEventHandlerFeature ProvisionFeatures(HttpContext httpContext)
         {
-            var jsonSerializerOptions =
-                _options.DefaultSerializerOptions
-                ?? httpContext.RequestServices
-                    .GetRequiredService<IOptions<JsonOptions>>().Value
-                    .JsonSerializerOptions;
+            var jsonSerializerOptions = _options.DefaultSerializerOptions ?? new JsonSerializerOptions
+            {
+                MaxDepth = 2,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
 
             var feature = new SlackEventHandlerFeature
             {
@@ -158,6 +203,7 @@ namespace RabbitSharp.Slack.Events
             feature.AttributesReader = CreateEventAttributesReader(httpContext, feature);
 
             httpContext.Features.Set<ISlackEventHandlerServicesFeature>(feature);
+            httpContext.Features.Set<ISlackRequestVerificationFeature>(feature);
 
             return feature;
         }
