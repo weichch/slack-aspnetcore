@@ -13,17 +13,16 @@ namespace RabbitSharp.Slack.Events
     public class SlackEventContext
     {
         private LinkGenerator? _linkGenerator;
-        private EventAttributesReaderContext? _readerContext;
 
         /// <summary>
         /// Creates an instance of the event context.
         /// </summary>
         /// <param name="httpContext">The HTTP context.</param>
-        /// <param name="eventAttributesReader">The event attributes reader.</param>
-        public SlackEventContext(HttpContext httpContext, IEventAttributesReader eventAttributesReader)
+        /// <param name="eventAttributesProvider">The event attributes provider.</param>
+        public SlackEventContext(HttpContext httpContext, IEventAttributesProvider eventAttributesProvider)
         {
             HttpContext = httpContext ?? throw new ArgumentNullException(nameof(httpContext));
-            EventAttributes = eventAttributesReader ?? throw new ArgumentNullException(nameof(eventAttributesReader));
+            EventAttributesProvider = eventAttributesProvider ?? throw new ArgumentNullException(nameof(eventAttributesProvider));
         }
 
         /// <summary>
@@ -32,9 +31,14 @@ namespace RabbitSharp.Slack.Events
         public HttpContext HttpContext { get; }
 
         /// <summary>
-        /// Gets the event attributes reader.
+        /// Gets the event attributes provider.
         /// </summary>
-        public IEventAttributesReader EventAttributes { get; }
+        public IEventAttributesProvider EventAttributesProvider { get; }
+
+        /// <summary>
+        /// Gets the event attributes.
+        /// </summary>
+        public object? EventAttributes { get; private set; }
 
         /// <summary>
         /// Gets an instance of <see cref="LinkGenerator"/> for composing URLs. You will need to
@@ -44,17 +48,17 @@ namespace RabbitSharp.Slack.Events
             ??= HttpContext.RequestServices.GetRequiredService<LinkGenerator>();
 
         /// <summary>
-        /// Reads event attributes.
+        /// Constructs event attributes.
         /// </summary>
-        /// <typeparam name="TAttributes">The type of the event attributes.</typeparam>
-        public ValueTask<TAttributes> ReadEventAttributes<TAttributes>()
+        public async ValueTask FetchEventAttributesAsync()
         {
-            if (_readerContext == null)
+            if (EventAttributes != null)
             {
-                _readerContext = new EventAttributesReaderContext(HttpContext);
+                return;
             }
 
-            return EventAttributes.ReadAsync<TAttributes>(_readerContext);
+            var providerContext = new EventAttributesProviderContext(HttpContext);
+            EventAttributes = await EventAttributesProvider.GetEventAttributes(providerContext);
         }
     }
 }

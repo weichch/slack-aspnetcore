@@ -16,6 +16,7 @@ namespace RabbitSharp.Slack.Events.Models
         {
             Token = string.Empty;
             TeamId = string.Empty;
+            EnterpriseId = string.Empty;
             ApplicationId = string.Empty;
             EventDispatchType = string.Empty;
             EventId = string.Empty;
@@ -39,6 +40,12 @@ namespace RabbitSharp.Slack.Events.Models
         /// </summary>
         [JsonPropertyName("team_id")]
         public string TeamId { get; set; }
+
+        /// <summary>
+        /// Represents the <c>enterprise_id</c> property.
+        /// </summary>
+        [JsonPropertyName("enterprise_id")]
+        public string EnterpriseId { get; set; }
 
         /// <summary>
         /// Represents the <c>api_app_id</c> property.

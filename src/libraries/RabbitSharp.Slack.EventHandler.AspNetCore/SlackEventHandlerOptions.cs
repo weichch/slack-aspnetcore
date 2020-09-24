@@ -17,6 +17,7 @@ namespace RabbitSharp.Slack.Events
         /// </summary>
         public SlackEventHandlerOptions()
         {
+            CallbackPath = "/slack/events";
             EventsHandlers = new List<ISlackEventHandler>();
 
             // TODO I wonder if 307 or 308 is more appropriate than 302, but Slack docs suggest
@@ -38,7 +39,7 @@ namespace RabbitSharp.Slack.Events
         /// notifications will be received. Requests sent to this path from Slack APIs will be
         /// handled by the middleware. The fully qualified URL (when this path is combined with
         /// other components of the request URL) should match the Request URL configured in
-        /// Slack API portal.
+        /// Slack API portal. Default value is <c>/slack/events</c>.
         /// </summary>
         public PathString CallbackPath { get; set; }
 
@@ -72,22 +73,22 @@ namespace RabbitSharp.Slack.Events
         public IList<ISlackEventHandler> EventsHandlers { get; }
 
         /// <summary>
-        /// Gets or sets an instance of <see cref="IEventAttributesReader"/> used by the middleware
+        /// Gets or sets an instance of <see cref="IEventAttributesProvider"/> used by the middleware
         /// to fetch attributes for each event received.
         /// </summary>
-        public IEventAttributesReader? EventAttributesReader { get; set; }
+        public IEventAttributesProvider? EventAttributesProvider { get; set; }
 
         /// <summary>
-        /// Gets or sets the type of <see cref="IEventAttributesReader"/> used by the middleware to
-        /// fetch attributes for each event received. When this property is set and <see cref="EventAttributesReader"/>
+        /// Gets or sets the type of <see cref="IEventAttributesProvider"/> used by the middleware to
+        /// fetch attributes for each event received. When this property is set and <see cref="EventAttributesProvider"/>
         /// is not set, the type is activated using dependency injection in the middleware. 
         /// </summary>
-        public Type? EventAttributesReaderType { get; set; }
+        public Type? EventAttributesProviderType { get; set; }
 
         /// <summary>
-        /// Gets or sets the parameters to pass into the constructor while activating <see cref="EventAttributesReaderType"/>.
+        /// Gets or sets the parameters to pass into the constructor while activating <see cref="EventAttributesProviderType"/>.
         /// </summary>
-        public object[]? EventAttributesReaderParameters { get; set; }
+        public object[]? EventAttributesProviderParameters { get; set; }
 
         /// <summary>
         /// Gets or sets the fallback response factory which is invoked when no event handler can handle

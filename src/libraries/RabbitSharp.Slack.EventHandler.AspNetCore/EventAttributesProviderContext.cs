@@ -6,15 +6,15 @@ using Microsoft.AspNetCore.Http;
 namespace RabbitSharp.Slack.Events
 {
     /// <summary>
-    /// Represents data context for <see cref="IEventAttributesReader"/>.
+    /// Represents data context for <see cref="IEventAttributesProvider"/>.
     /// </summary>
-    public class EventAttributesReaderContext
+    public class EventAttributesProviderContext
     {
         /// <summary>
         /// Creates an instance of the context.
         /// </summary>
         /// <param name="httpContext">The HTTP context.</param>
-        public EventAttributesReaderContext(HttpContext httpContext)
+        public EventAttributesProviderContext(HttpContext httpContext)
         {
             HttpContext = httpContext ?? throw new ArgumentNullException(nameof(httpContext));
             Event = httpContext.Request.Body;

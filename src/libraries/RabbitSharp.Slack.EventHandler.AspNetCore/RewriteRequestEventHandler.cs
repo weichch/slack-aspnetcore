@@ -21,17 +21,20 @@ namespace RabbitSharp.Slack.Events
             _pathBuilder = pathBuilder;
         }
 
-        public async ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
+        public ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
         {
-            var eventWrapper = await context.ReadEventAttributes<EventWrapper?>();
-
-            if (eventWrapper == null || !_predicate(eventWrapper))
+            if (context.EventAttributes is EventWrapper eventWrapper)
             {
-                return SlackEventHandlerResult.NoResult();
+                if (!_predicate(eventWrapper))
+                {
+                    return SlackEventHandlerResult.NoResult();
+                }
+
+                var newPath = _pathBuilder(context, eventWrapper);
+                return SlackEventHandlerResult.Rewrite(newPath);
             }
 
-            var newPath = _pathBuilder(context, eventWrapper);
-            return SlackEventHandlerResult.Rewrite(newPath);
+            return SlackEventHandlerResult.NoResult();
         }
     }
 }

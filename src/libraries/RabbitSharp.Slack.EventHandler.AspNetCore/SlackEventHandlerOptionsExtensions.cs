@@ -55,8 +55,12 @@ namespace RabbitSharp.Slack.Events
 
             return options.AddDelegateHandler(async context =>
             {
-                var eventWrapper = await context.ReadEventAttributes<TAttributes>();
-                return await resultFactory(context, eventWrapper);
+                if (context.EventAttributes is TAttributes attributes)
+                {
+                    return await resultFactory(context, attributes);
+                }
+
+                return SlackEventHandlerResult.NoResult();
             });
         }
 

@@ -19,18 +19,16 @@ namespace RabbitSharp.Slack.Events
                 throw new ArgumentNullException(nameof(context));
             }
 
-            var content = await context.ReadEventAttributes<UrlVerification?>();
-            if (content == null
-                || !string.Equals(content.Type, EventTypeUrlVerification, StringComparison.OrdinalIgnoreCase))
+            if (context.EventAttributes is UrlVerification urlVerification)
             {
-                return SlackEventHandlerResult.NoResult();
+                var httpContext = context.HttpContext;
+                httpContext.Response.StatusCode = StatusCodes.Status200OK;
+                httpContext.Response.ContentType = ContentTypePlainText;
+                await httpContext.Response.WriteAsync(urlVerification.Challenge);
+                return SlackEventHandlerResult.EndResponse();
             }
 
-            var httpContext = context.HttpContext;
-            httpContext.Response.StatusCode = StatusCodes.Status200OK;
-            httpContext.Response.ContentType = ContentTypePlainText;
-            await httpContext.Response.WriteAsync(content.Challenge);
-            return SlackEventHandlerResult.EndResponse();
+            return SlackEventHandlerResult.NoResult();
         }
     }
 }

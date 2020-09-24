@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace RabbitSharp.Slack.Events
 {
@@ -7,6 +8,11 @@ namespace RabbitSharp.Slack.Events
     /// </summary>
     public interface ISlackEventHandlerServicesFeature
     {
+        /// <summary>
+        /// Gets the log level.
+        /// </summary>
+        LogLevel LogLevel { get; }
+
         /// <summary>
         /// Gets the JSON serializer options.
         /// </summary>
@@ -18,8 +24,8 @@ namespace RabbitSharp.Slack.Events
         ISlackRequestValidator RequestValidator { get; }
 
         /// <summary>
-        /// Gets the event attributes reader.
+        /// Gets the event attributes provider.
         /// </summary>
-        IEventAttributesReader AttributesReader { get; }
+        IEventAttributesProvider EventAttributesProvider { get; }
     }
 }

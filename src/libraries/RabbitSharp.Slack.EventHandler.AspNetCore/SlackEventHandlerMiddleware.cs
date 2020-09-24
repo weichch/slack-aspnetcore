@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Encodings.Web;
@@ -22,6 +21,7 @@ namespace RabbitSharp.Slack.Events
     public class SlackEventHandlerMiddleware
     {
         private readonly RequestDelegate _next;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly SlackEventHandlerOptions _options;
         private readonly ILogger _logger;
         private readonly LogLevel _logLevel;
@@ -42,13 +42,9 @@ namespace RabbitSharp.Slack.Events
                 throw new ArgumentNullException(nameof(options));
             }
 
-            if (loggerFactory == null)
-            {
-                throw new ArgumentNullException(nameof(loggerFactory));
-            }
-
-            _next = next ?? throw new ArgumentNullException(nameof(next));
             _options = options.Value;
+            _next = next ?? throw new ArgumentNullException(nameof(next));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _logger = loggerFactory.CreateLogger<SlackEventHandlerMiddleware>();
             _logLevel = _options.InternalLogLevel;
         }
@@ -103,9 +99,10 @@ namespace RabbitSharp.Slack.Events
             }
 
             // Handle request in event handlers
-            var eventContext = new SlackEventContext(httpContext, feature.AttributesReader);
-            SlackEventHandlerResult result = default;
+            var eventContext = new SlackEventContext(httpContext, feature.EventAttributesProvider);
+            await eventContext.FetchEventAttributesAsync();
 
+            SlackEventHandlerResult result = default;
             foreach (var eventHandler in _options.EventsHandlers)
             {
                 try
@@ -190,17 +187,17 @@ namespace RabbitSharp.Slack.Events
         {
             var jsonSerializerOptions = _options.DefaultSerializerOptions ?? new JsonSerializerOptions
             {
-                MaxDepth = 2,
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
 
             var feature = new SlackEventHandlerFeature
             {
+                LogLevel = _options.InternalLogLevel,
                 SerializerOptions = jsonSerializerOptions,
                 RequestValidator = httpContext.GetSlackRequestValidator(),
                 Parameters = _options.RequestValidationParameters
             };
-            feature.AttributesReader = CreateEventAttributesReader(httpContext, feature);
+            feature.EventAttributesProvider = CreateEventAttributesProvider(httpContext, feature);
 
             httpContext.Features.Set<ISlackEventHandlerServicesFeature>(feature);
             httpContext.Features.Set<ISlackRequestVerificationFeature>(feature);
@@ -221,41 +218,41 @@ namespace RabbitSharp.Slack.Events
         }
 
         /// <summary>
-        /// Creates <see cref="IEventAttributesReader"/>.
+        /// Creates <see cref="IEventAttributesProvider"/>.
         /// </summary>
-        private IEventAttributesReader CreateEventAttributesReader(
+        private IEventAttributesProvider CreateEventAttributesProvider(
             HttpContext httpContext,
             ISlackEventHandlerServicesFeature feature)
         {
-            IEventAttributesReader reader;
+            IEventAttributesProvider provider;
 
-            if (_options.EventAttributesReader != null)
+            if (_options.EventAttributesProvider != null)
             {
-                reader = _options.EventAttributesReader;
+                provider = _options.EventAttributesProvider;
             }
-            else if (_options.EventAttributesReaderType != null)
+            else if (_options.EventAttributesProviderType != null)
             {
-                if (_options.EventAttributesReaderParameters?.Any() == true)
+                if (_options.EventAttributesProviderParameters?.Any() == true)
                 {
-                    reader = (IEventAttributesReader)ActivatorUtilities.CreateInstance(
+                    provider = (IEventAttributesProvider)ActivatorUtilities.CreateInstance(
                         httpContext.RequestServices,
-                        _options.EventAttributesReaderType,
-                        _options.EventAttributesReaderParameters ?? Array.Empty<object>());
+                        _options.EventAttributesProviderType,
+                        _options.EventAttributesProviderParameters ?? Array.Empty<object>());
                 }
                 else
                 {
-                    reader = (IEventAttributesReader) ActivatorUtilities.GetServiceOrCreateInstance(
+                    provider = (IEventAttributesProvider) ActivatorUtilities.GetServiceOrCreateInstance(
                         httpContext.RequestServices,
-                        _options.EventAttributesReaderType);
+                        _options.EventAttributesProviderType);
                 }
             }
             else
             {
-                // Create default event attributes reader
-                reader = new DefaultEventAttributesReader(feature);
+                // Create default event attributes provider
+                provider = new DefaultEventAttributesProvider(feature, _loggerFactory);
             }
 
-            return reader;
+            return provider;
         }
 
         /// <summary>
