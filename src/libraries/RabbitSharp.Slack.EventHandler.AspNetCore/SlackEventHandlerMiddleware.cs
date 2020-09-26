@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Net.Mime;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -100,7 +98,7 @@ namespace RabbitSharp.Slack.Events
 
             // Handle request in event handlers
             var eventContext = new SlackEventContext(httpContext, feature.EventAttributesProvider);
-            await eventContext.FetchEventAttributesAsync();
+            await eventContext.FetchEventTypesAsync();
 
             SlackEventHandlerResult result = default;
             foreach (var eventHandler in _options.EventsHandlers)
@@ -185,15 +183,10 @@ namespace RabbitSharp.Slack.Events
         /// <param name="httpContext">The HTTP context.</param>
         private SlackEventHandlerFeature ProvisionFeatures(HttpContext httpContext)
         {
-            var jsonSerializerOptions = _options.DefaultSerializerOptions ?? new JsonSerializerOptions
-            {
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-
             var feature = new SlackEventHandlerFeature
             {
                 LogLevel = _options.InternalLogLevel,
-                SerializerOptions = jsonSerializerOptions,
+                SerializerOptions = _options.GetOrCreateJsonSerializerOptions(),
                 RequestValidator = httpContext.GetSlackRequestValidator(),
                 Parameters = _options.RequestValidationParameters
             };
@@ -249,7 +242,7 @@ namespace RabbitSharp.Slack.Events
             else
             {
                 // Create default event attributes provider
-                provider = new DefaultEventAttributesProvider(feature, _loggerFactory);
+                provider = new EventAttributesProvider(feature, _loggerFactory);
             }
 
             return provider;

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using RabbitSharp.Slack.Http;
 
 namespace RabbitSharp.Slack.Events
 {

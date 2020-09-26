@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using static RabbitSharp.Slack.Events.SlackEventHandlerConstants;
 
-namespace RabbitSharp.Slack.Events
+namespace RabbitSharp.Slack.Http
 {
     /// <summary>
     /// Implements <see cref="ISlackRequestValidator"/>.
@@ -32,11 +32,9 @@ namespace RabbitSharp.Slack.Events
             }
 
             var request = httpContext.Request;
-            // Fail early if we can't seek to the beginning of the request body.
-            if (!request.Body.CanSeek)
+            if (request.Body.CanSeek)
             {
-                throw new InvalidOperationException(
-                    "HTTP request body cannot be read more than once. Try turning request buffering on.");
+                request.Body.Seek(0, SeekOrigin.Begin);
             }
 
             var signingSecret = parameters.SigningSecret

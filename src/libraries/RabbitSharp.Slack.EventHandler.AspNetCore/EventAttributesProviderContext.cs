@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using Microsoft.AspNetCore.Http;
 
 namespace RabbitSharp.Slack.Events
 {
@@ -13,18 +12,20 @@ namespace RabbitSharp.Slack.Events
         /// <summary>
         /// Creates an instance of the context.
         /// </summary>
-        /// <param name="httpContext">The HTTP context.</param>
-        public EventAttributesProviderContext(HttpContext httpContext)
+        /// <param name="eventContext">The event context.</param>
+        public EventAttributesProviderContext(SlackEventContext eventContext)
         {
-            HttpContext = httpContext ?? throw new ArgumentNullException(nameof(httpContext));
+            EventContext = eventContext ?? throw new ArgumentNullException(nameof(eventContext));
+
+            var httpContext = eventContext.HttpContext;
             Event = httpContext.Request.Body;
             CancellationToken = httpContext.RequestAborted;
         }
 
         /// <summary>
-        /// Gets the HTTP context.
+        /// Gets the event context.
         /// </summary>
-        public HttpContext HttpContext { get; }
+        public SlackEventContext EventContext { get; }
 
         /// <summary>
         /// Gets the stream which contains event data.

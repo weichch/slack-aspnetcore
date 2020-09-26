@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using RabbitSharp.Slack.Events;
+using RabbitSharp.Slack.Http;
 
-namespace RabbitSharp.Slack.Events
+namespace Microsoft.AspNetCore.Http
 {
     /// <summary>
     /// Provides extensions to <see cref="HttpContext"/> for Slack event handlers.

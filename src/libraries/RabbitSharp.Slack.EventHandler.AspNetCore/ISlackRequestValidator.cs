@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
-namespace RabbitSharp.Slack.Events
+namespace RabbitSharp.Slack.Http
 {
     /// <summary>
     /// Provides mechanisms to verify requests from Slack.

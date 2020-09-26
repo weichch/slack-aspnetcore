@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RabbitSharp.Slack.Http;
 
 namespace RabbitSharp.Slack.Events.Tests.App
 {
@@ -45,7 +46,7 @@ namespace RabbitSharp.Slack.Events.Tests.App
             IServiceCollection services, 
             IConfiguration configuration)
         {
-            services.AddControllers();
+            services.AddControllers().AddNewtonsoftJson();
         }
 
         protected virtual void ConfigureApp(
@@ -97,7 +98,7 @@ namespace RabbitSharp.Slack.Events.Tests.App
             return request;
         }
 
-        protected object CreateUrlVerificationBody(string? challenge = null)
+        public static object CreateUrlVerificationBody(string? challenge = null)
         {
             return new
             {
@@ -107,28 +108,64 @@ namespace RabbitSharp.Slack.Events.Tests.App
             };
         }
 
-        protected object CreateEventBody(string? eventType = null)
+        public static object CreateEventBody(string? eventType = null)
         {
             return new
             {
-                token = Guid.NewGuid().ToString("N"),
-                team_id = Guid.NewGuid().ToString("N"),
-                api_app_id = Guid.NewGuid().ToString("N"),
+                token = RandomString(),
+                team_id = RandomString(),
+                enterprise_id = RandomString(),
+                api_app_id = RandomString(),
                 @event = new
                 {
-                    type = eventType ?? Guid.NewGuid().ToString("N"),
-                    event_ts = Guid.NewGuid().ToString("N")
+                    client_msg_id = RandomString(),
+                    type = eventType ?? RandomString(),
+                    text = RandomString(),
+                    user = RandomString(),
+                    ts = RandomString(),
+                    team = RandomString(),
+                    blocks = new[]
+                    {
+                        new
+                        {
+                            type = RandomString(),
+                            block_id = RandomString(),
+                            elements = new[]
+                            {
+                                new
+                                {
+                                    type = RandomString(),
+                                    elements = new[]
+                                    {
+                                        new
+                                        {
+                                            type = RandomString(),
+                                            text = RandomString()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    channel = RandomString(),
+                    event_ts = RandomString(),
+                    channel_type = RandomString()
                 },
-                type = Guid.NewGuid().ToString("N"),
-                event_id = Guid.NewGuid().ToString("N"),
+                type = RandomString(),
+                event_id = RandomString(),
                 event_time = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 authed_users = new[]
                 {
-                    Guid.NewGuid().ToString("N"),
-                    Guid.NewGuid().ToString("N"),
-                    Guid.NewGuid().ToString("N"),
+                    RandomString(),
+                    RandomString(),
+                    RandomString(),
                 }
             };
+
+            static string RandomString()
+            {
+                return Guid.NewGuid().ToString("N");
+            }
         }
 
         public virtual void Dispose()

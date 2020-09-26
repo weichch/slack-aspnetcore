@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using RabbitSharp.Slack.Events.Handlers;
 using RabbitSharp.Slack.Events.Models;
 
 namespace RabbitSharp.Slack.Events
@@ -23,45 +24,6 @@ namespace RabbitSharp.Slack.Events
 
             options.EventsHandlers.Add(new UrlVerificationEventHandler());
             return options;
-        }
-
-        /// <summary>
-        /// Adds event handler which produces <see cref="SlackEventHandlerResult"/> using
-        /// a delegate function.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <param name="resultFactory">The delegate function which produces <see cref="SlackEventHandlerResult"/>.</param>
-        public static SlackEventHandlerOptions AddDelegateHandler(
-            this SlackEventHandlerOptions options,
-            Func<SlackEventContext, EventWrapper, ValueTask<SlackEventHandlerResult>> resultFactory)
-        {
-            return options.AddDelegateHandler<EventWrapper>(resultFactory);
-        }
-
-        /// <summary>
-        /// Adds event handler which produces <see cref="SlackEventHandlerResult"/> using
-        /// a delegate function.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <param name="resultFactory">The delegate function which produces <see cref="SlackEventHandlerResult"/>.</param>
-        public static SlackEventHandlerOptions AddDelegateHandler<TAttributes>(
-            this SlackEventHandlerOptions options,
-            Func<SlackEventContext, TAttributes, ValueTask<SlackEventHandlerResult>> resultFactory)
-        {
-            if (resultFactory == null)
-            {
-                throw new ArgumentNullException(nameof(resultFactory));
-            }
-
-            return options.AddDelegateHandler(async context =>
-            {
-                if (context.EventAttributes is TAttributes attributes)
-                {
-                    return await resultFactory(context, attributes);
-                }
-
-                return SlackEventHandlerResult.NoResult();
-            });
         }
 
         /// <summary>
@@ -100,8 +62,7 @@ namespace RabbitSharp.Slack.Events
             Uri location)
         {
             SlackEventHandlerResult.EnsureRedirectLocation(location);
-            options.AddRedirect(predicate, _ => location);
-            return options;
+            return options.AddRedirect(predicate, _ => location);
         }
 
         /// <summary>
@@ -146,22 +107,19 @@ namespace RabbitSharp.Slack.Events
             string eventType,
             Uri location)
         {
-            return options.AddRedirect(evt => evt.IsOfType(eventType), location);
-        }
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
 
-        /// <summary>
-        /// Adds event handler which redirects request to a new location when event type is equal to
-        /// specified event type.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <param name="eventType">The target event type.</param>
-        /// <param name="locationBuilder">The new location builder.</param>
-        public static SlackEventHandlerOptions AddEventTypeRedirect(
-            this SlackEventHandlerOptions options,
-            string eventType,
-            Func<EventWrapper, Uri> locationBuilder)
-        {
-            return options.AddRedirect(evt => evt.IsOfType(eventType), locationBuilder);
+            if (eventType == null)
+            {
+                throw new ArgumentNullException(nameof(eventType));
+            }
+
+            SlackEventHandlerResult.EnsureRedirectLocation(location);
+            options.EventsHandlers.Add(new RedirectEventTypeEventHandler(eventType, location));
+            return options;
         }
 
         /// <summary>
@@ -176,19 +134,7 @@ namespace RabbitSharp.Slack.Events
             Predicate<EventWrapper> predicate,
             PathString newPath)
         {
-            if (options == null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
-
-            if (predicate == null)
-            {
-                throw new ArgumentNullException(nameof(predicate));
-            }
-
-            options.EventsHandlers.Add(new RewriteRequestEventHandler(
-                predicate, (context, evt) => newPath));
-            return options;
+            return options.AddRewrite(predicate, (context, evt) => newPath);
         }
 
         /// <summary>
@@ -218,8 +164,7 @@ namespace RabbitSharp.Slack.Events
                 throw new ArgumentNullException(nameof(pathBuilder));
             }
 
-            options.EventsHandlers.Add(
-                new RewriteRequestEventHandler(predicate, pathBuilder));
+            options.EventsHandlers.Add(new RewriteRequestEventHandler(predicate, pathBuilder));
             return options;
         }
 
@@ -235,7 +180,7 @@ namespace RabbitSharp.Slack.Events
             string eventType,
             PathString newPath)
         {
-            return options.AddRewrite(evt => evt.IsOfType(eventType), newPath);
+            return options.AddEventTypeRewrite(eventType, _ => newPath);
         }
 
         /// <summary>
@@ -248,9 +193,25 @@ namespace RabbitSharp.Slack.Events
         public static SlackEventHandlerOptions AddEventTypeRewrite(
             this SlackEventHandlerOptions options,
             string eventType,
-            Func<SlackEventContext, EventWrapper, PathString> pathBuilder)
+            Func<SlackEventContext, PathString> pathBuilder)
         {
-            return options.AddRewrite(evt => evt.IsOfType(eventType), pathBuilder);
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
+
+            if (eventType == null)
+            {
+                throw new ArgumentNullException(nameof(eventType));
+            }
+
+            if (pathBuilder == null)
+            {
+                throw new ArgumentNullException(nameof(pathBuilder));
+            }
+
+            options.EventsHandlers.Add(new RewriteEventTypeEventHandler(eventType, pathBuilder));
+            return options;
         }
     }
 }

@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using RabbitSharp.Slack.Events.Models;
+using RabbitSharp.Slack.Http;
 
 namespace RabbitSharp.Slack.Events
 {
@@ -68,6 +71,14 @@ namespace RabbitSharp.Slack.Events
         public JsonSerializerOptions? DefaultSerializerOptions { get; set; }
 
         /// <summary>
+        /// Gets or sets whether to deserialize additional properties as data extensions
+        /// when constructing <see cref="EventWrapper"/> and <see cref="EventProperties"/>.
+        /// When this property is set to <c>true</c>, properties not defined in model types
+        /// will be deserialized into extensions property. Default value is <c>false</c>.
+        /// </summary>
+        public bool DeserializeAdditionalProperties { get; set; }
+
+        /// <summary>
         /// Gets a list of registered event handlers used by the middleware to handle Slack events.
         /// </summary>
         public IList<ISlackEventHandler> EventsHandlers { get; }
@@ -107,5 +118,28 @@ namespace RabbitSharp.Slack.Events
         /// Gets or sets the status code used when redirecting the response. Default value is <c>302 Found</c>.
         /// </summary>
         public int RedirectStatusCode { get; set; }
+
+        /// <summary>
+        /// If <see cref="DefaultSerializerOptions"/> is not <c>null</c>, returns <see cref="DefaultSerializerOptions"/>.
+        /// Otherwise, creates an instance of <see cref="JsonSerializerOptions"/> with a set of default settings.
+        /// </summary>
+        public JsonSerializerOptions GetOrCreateJsonSerializerOptions()
+        {
+            if (DefaultSerializerOptions != null)
+            {
+                return DefaultSerializerOptions;
+            }
+
+            return new JsonSerializerOptions
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                Converters =
+                {
+                    new EventWrapperJsonConverter {SupportExtensions = DeserializeAdditionalProperties},
+                    new EventPropertiesJsonConverter {SupportExtensions = DeserializeAdditionalProperties}
+                }
+            };
+        }
+
     }
 }

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using RabbitSharp.Slack.Events.Models;
 
-namespace RabbitSharp.Slack.Events
+namespace RabbitSharp.Slack.Events.Handlers
 {
     /// <summary>
     /// Implements <see cref="ISlackEventHandler"/> by rewriting current HTTP request to an alternative path.
@@ -21,8 +21,15 @@ namespace RabbitSharp.Slack.Events
             _pathBuilder = pathBuilder;
         }
 
-        public ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
+        public async ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
         {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            await context.FetchEventAttributesAsync();
+            
             if (context.EventAttributes is EventWrapper eventWrapper)
             {
                 if (!_predicate(eventWrapper))

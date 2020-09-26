@@ -1,8 +1,11 @@
 ﻿using System;
+using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using RabbitSharp.Slack.Events.Models;
 
 namespace RabbitSharp.Slack.Events
 {
@@ -36,6 +39,16 @@ namespace RabbitSharp.Slack.Events
         public IEventAttributesProvider EventAttributesProvider { get; }
 
         /// <summary>
+        /// Gets or sets the type of the event dispatch.
+        /// </summary>
+        public string? EventDispatchType { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the type of the event data.
+        /// </summary>
+        public string? EventType { get; private set; }
+
+        /// <summary>
         /// Gets the event attributes.
         /// </summary>
         public object? EventAttributes { get; private set; }
@@ -48,6 +61,31 @@ namespace RabbitSharp.Slack.Events
             ??= HttpContext.RequestServices.GetRequiredService<LinkGenerator>();
 
         /// <summary>
+        /// Sets <see cref="EventDispatchType"/> and <see cref="EventType"/>.
+        /// </summary>
+        public async ValueTask FetchEventTypesAsync()
+        {
+            if (!string.IsNullOrWhiteSpace(EventDispatchType))
+            {
+                return;
+            }
+
+            var requestBody = HttpContext.Request.Body;
+            if (requestBody.CanSeek)
+            {
+                requestBody.Seek(0, SeekOrigin.Begin);
+            }
+
+            using var jsonDoc = await JsonDocument.ParseAsync(
+                requestBody,
+                cancellationToken: HttpContext.RequestAborted);
+
+            jsonDoc.ReadEventTypes(out var eventDispatchType, out var eventType);
+            EventDispatchType = eventDispatchType;
+            EventType = eventType;
+        }
+
+        /// <summary>
         /// Constructs event attributes.
         /// </summary>
         public async ValueTask FetchEventAttributesAsync()
@@ -57,7 +95,7 @@ namespace RabbitSharp.Slack.Events
                 return;
             }
 
-            var providerContext = new EventAttributesProviderContext(HttpContext);
+            var providerContext = new EventAttributesProviderContext(this);
             EventAttributes = await EventAttributesProvider.GetEventAttributes(providerContext);
         }
     }

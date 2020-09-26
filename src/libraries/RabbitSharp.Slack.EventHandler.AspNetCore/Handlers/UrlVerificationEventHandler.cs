@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using RabbitSharp.Slack.Events.Models;
 using static RabbitSharp.Slack.Events.SlackEventHandlerConstants;
 
-namespace RabbitSharp.Slack.Events
+namespace RabbitSharp.Slack.Events.Handlers
 {
     /// <summary>
     /// Handles URL verification handshake according to Slack API documentation at
@@ -18,6 +18,8 @@ namespace RabbitSharp.Slack.Events
             {
                 throw new ArgumentNullException(nameof(context));
             }
+
+            await context.FetchEventAttributesAsync();
 
             if (context.EventAttributes is UrlVerification urlVerification)
             {

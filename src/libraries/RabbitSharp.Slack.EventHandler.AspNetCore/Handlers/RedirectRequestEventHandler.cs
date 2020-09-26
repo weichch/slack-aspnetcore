@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using RabbitSharp.Slack.Events.Models;
 
-namespace RabbitSharp.Slack.Events
+namespace RabbitSharp.Slack.Events.Handlers
 {
     /// <summary>
     /// Implements <see cref="ISlackEventHandler"/> by redirecting current HTTP request.
@@ -20,8 +20,15 @@ namespace RabbitSharp.Slack.Events
             _locationBuilder = locationBuilder;
         }
 
-        public ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
+        public async ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
         {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            await context.FetchEventAttributesAsync();
+
             if (context.EventAttributes is EventWrapper eventWrapper)
             {
                 if (!_predicate(eventWrapper))

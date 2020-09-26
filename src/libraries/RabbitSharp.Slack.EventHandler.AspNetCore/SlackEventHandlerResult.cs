@@ -148,13 +148,5 @@ namespace RabbitSharp.Slack.Events
                 throw new ArgumentException("Location must be an absolute URI.", nameof(location));
             }
         }
-
-        /// <summary>
-        /// Converts <see cref="SlackEventHandlerResult"/> to <see cref="ValueTask{T}"/>.
-        /// </summary>
-        public static implicit operator ValueTask<SlackEventHandlerResult>(SlackEventHandlerResult result)
-        {
-            return new ValueTask<SlackEventHandlerResult>(result);
-        }
     }
 }

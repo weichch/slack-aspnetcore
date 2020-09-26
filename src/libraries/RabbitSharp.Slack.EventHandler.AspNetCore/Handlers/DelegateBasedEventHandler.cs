@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace RabbitSharp.Slack.Events
+namespace RabbitSharp.Slack.Events.Handlers
 {
     /// <summary>
     /// Represents <see cref="ISlackEventHandler"/> which uses a delegate function to produce

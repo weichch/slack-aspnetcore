@@ -1,4 +1,6 @@
-﻿namespace RabbitSharp.Slack.Events
+﻿using RabbitSharp.Slack.Http;
+
+namespace RabbitSharp.Slack.Events
 {
     /// <summary>
     /// Represents feature for verifying requests from Slack. This feature is provisioned

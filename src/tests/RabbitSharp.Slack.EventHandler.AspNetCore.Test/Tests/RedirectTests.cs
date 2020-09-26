@@ -60,8 +60,8 @@ namespace RabbitSharp.Slack.Events.Tests.Tests
             options.RedirectStatusCode = StatusCodes.Status307TemporaryRedirect;
 
             options.AddRedirect(
-                e => e.Event.EventType == "custom_event1",
-                e => new Uri($"http://starwars.com/event/{e.Event.EventType}"));
+                e => e.Event.Type == "custom_event1",
+                e => new Uri($"http://starwars.com/event/{e.Event.Type}"));
 
             options.AddEventTypeRedirect(
                 "custom_event2",

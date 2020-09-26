@@ -3,7 +3,7 @@ using System.Threading;
 using Microsoft.AspNetCore.Http;
 using static RabbitSharp.Slack.Events.SlackEventHandlerConstants;
 
-namespace RabbitSharp.Slack.Events
+namespace RabbitSharp.Slack.Http
 {
     /// <summary>
     /// Provides parameters for verifying Slack requests.

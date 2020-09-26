@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using RabbitSharp.Slack.Events.Models;
+using Newtonsoft.Json.Linq;
 
 namespace RabbitSharp.Slack.Events.Tests.App
 {
@@ -9,8 +9,8 @@ namespace RabbitSharp.Slack.Events.Tests.App
     {
         [Route("{eventId}")]
         public async Task<IActionResult> HandleCustomEvent(
-            string eventId, 
-            [FromBody] EventWrapper evt)
+            string eventId,
+            [FromBody] JObject evt)
         {
             await Task.Yield();
             return Ok(evt);
