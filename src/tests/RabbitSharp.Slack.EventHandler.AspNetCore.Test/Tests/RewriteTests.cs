@@ -62,12 +62,17 @@ namespace RabbitSharp.Slack.Events.Tests.Tests
         protected override void ConfigureSlackEventHandler(SlackEventHandlerOptions options)
         {
             options.AddRewrite(
-                e => e.Event.Type == "custom_event1",
-                (context, e) => context.LinkHelper.GetPathByAction(
-                    context.HttpContext,
-                    action: "HandleCustomEvent",
-                    controller: "Event",
-                    values: new {eventId = e.Event.Type}));
+                ctx => ctx.EventTypeEquals("custom_event1"),
+                async ctx =>
+                {
+                    var eventWrapper = await ctx.GetEventAttributes();
+
+                    return ctx.LinkHelper.GetPathByAction(
+                        ctx.HttpContext,
+                        action: "HandleCustomEvent",
+                        controller: "Event",
+                        values: new {eventId = eventWrapper!.Event.Type});
+                });
 
             options.AddEventTypeRewrite("custom_event2", "/events/custom_event2");
         }

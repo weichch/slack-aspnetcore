@@ -36,17 +36,18 @@ namespace RabbitSharp.Slack.Events
             object? value;
             try
             {
-                var attributeType = context.EventContext.EventDispatchType;
-                if (string.IsNullOrWhiteSpace(attributeType))
+                var eventAttributesType = context.EventContext switch
+                {
+                    var ctx when ctx.EventTypeEquals(
+                        SlackEventHandlerConstants.EventTypeUrlVerification) => typeof(UrlVerification),
+                    var ctx when string.IsNullOrWhiteSpace(ctx.EventType) => null,
+                    _ => typeof(EventWrapper)
+                };
+
+                if (eventAttributesType == null)
                 {
                     return null;
                 }
-
-                var eventAttributesType = attributeType switch
-                {
-                    SlackEventHandlerConstants.EventTypeUrlVerification => typeof(UrlVerification),
-                    _ => typeof(EventWrapper)
-                };
 
                 var eventStream = context.Event;
                 if (eventStream.CanSeek)

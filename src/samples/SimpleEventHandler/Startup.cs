@@ -1,15 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using RabbitSharp.Slack.Events;
 
 namespace SimpleEventHandler
@@ -39,11 +35,16 @@ namespace SimpleEventHandler
 
             app.UseSlackEventHandler(options =>
             {
-                options.AddRewrite(e => true, (ctx, e) =>
-                    ctx.LinkHelper.GetPathByAction(
-                        ctx.HttpContext,
-                        action: "Post",
-                        controller: "SlackEvents"));
+                options.AddRewrite(
+                    ctx => !ctx.EventTypeEquals("url_verification"),
+                    ctx =>
+                    {
+                        var path = ctx.LinkHelper.GetPathByAction(
+                            ctx.HttpContext,
+                            action: "Post",
+                            controller: "SlackEvents");
+                        return new ValueTask<PathString>(new PathString(path));
+                    });
 
                 options.AddUrlVerification();
             });

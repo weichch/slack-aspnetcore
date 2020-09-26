@@ -16,16 +16,19 @@ namespace RabbitSharp.Slack.Events
     public class SlackEventContext
     {
         private LinkGenerator? _linkGenerator;
+        private string? _eventType;
 
         /// <summary>
         /// Creates an instance of the event context.
         /// </summary>
         /// <param name="httpContext">The HTTP context.</param>
+        /// <param name="eventData">The event data.</param>
         /// <param name="eventAttributesProvider">The event attributes provider.</param>
-        public SlackEventContext(HttpContext httpContext, IEventAttributesProvider eventAttributesProvider)
+        public SlackEventContext(HttpContext httpContext, JsonDocument eventData, IEventAttributesProvider eventAttributesProvider)
         {
             HttpContext = httpContext ?? throw new ArgumentNullException(nameof(httpContext));
             EventAttributesProvider = eventAttributesProvider ?? throw new ArgumentNullException(nameof(eventAttributesProvider));
+            Event = eventData ?? throw new ArgumentNullException(nameof(eventData));
         }
 
         /// <summary>
@@ -44,14 +47,25 @@ namespace RabbitSharp.Slack.Events
         public string? EventDispatchType { get; private set; }
 
         /// <summary>
-        /// Gets or sets the type of the event data.
+        /// Gets or sets the type of the event. If event is wrapped in <see cref="EventWrapper"/>,
+        /// this property returns the type of the wrapped event. Otherwise, this property returns
+        /// <see cref="EventDispatchType"/>.
         /// </summary>
-        public string? EventType { get; private set; }
+        public string? EventType
+        {
+            get => _eventType ?? EventDispatchType;
+            private set => _eventType = value;
+        }
 
         /// <summary>
         /// Gets the event attributes.
         /// </summary>
         public object? EventAttributes { get; private set; }
+
+        /// <summary>
+        /// Gets the event object.
+        /// </summary>
+        public JsonDocument Event { get; }
 
         /// <summary>
         /// Gets an instance of <see cref="LinkGenerator"/> for composing URLs. You will need to
@@ -63,24 +77,14 @@ namespace RabbitSharp.Slack.Events
         /// <summary>
         /// Sets <see cref="EventDispatchType"/> and <see cref="EventType"/>.
         /// </summary>
-        public async ValueTask FetchEventTypesAsync()
+        public void FetchEventTypes()
         {
             if (!string.IsNullOrWhiteSpace(EventDispatchType))
             {
                 return;
             }
 
-            var requestBody = HttpContext.Request.Body;
-            if (requestBody.CanSeek)
-            {
-                requestBody.Seek(0, SeekOrigin.Begin);
-            }
-
-            using var jsonDoc = await JsonDocument.ParseAsync(
-                requestBody,
-                cancellationToken: HttpContext.RequestAborted);
-
-            jsonDoc.ReadEventTypes(out var eventDispatchType, out var eventType);
+            Event.ReadEventTypes(out var eventDispatchType, out var eventType);
             EventDispatchType = eventDispatchType;
             EventType = eventType;
         }
@@ -97,6 +101,41 @@ namespace RabbitSharp.Slack.Events
 
             var providerContext = new EventAttributesProviderContext(this);
             EventAttributes = await EventAttributesProvider.GetEventAttributes(providerContext);
+        }
+
+        /// <summary>
+        /// Returns whether event type is equal to specified value.
+        /// </summary>
+        /// <param name="type">The event type.</param>
+        public bool EventTypeEquals(string type)
+        {
+            FetchEventTypes();
+            return string.Equals(EventType, type, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Creates an instance of <see cref="SlackEventContext"/> from HTTP request.
+        /// </summary>
+        /// <param name="httpContext">The HTTP context.</param>
+        public static SlackEventContext CreateFromHttpContext(HttpContext httpContext)
+        {
+            var feature = httpContext.Features.Get<ISlackEventHandlerServicesFeature>();
+            if (feature == null)
+            {
+                throw new InvalidOperationException(
+                    "No feature found. Have you added SlackEventHandlerMiddleware?");
+            }
+
+            var requestBody = httpContext.Request.Body;
+            if (requestBody.CanSeek)
+            {
+                requestBody.Seek(0, SeekOrigin.Begin);
+            }
+
+            var eventObj = JsonDocument.Parse(requestBody);
+            httpContext.Response.RegisterForDispose(eventObj);
+
+            return new SlackEventContext(httpContext, eventObj, feature.EventAttributesProvider);
         }
     }
 }

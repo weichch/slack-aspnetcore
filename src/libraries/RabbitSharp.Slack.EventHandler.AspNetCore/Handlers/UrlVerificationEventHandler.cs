@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using RabbitSharp.Slack.Events.Models;
 using static RabbitSharp.Slack.Events.SlackEventHandlerConstants;
 
 namespace RabbitSharp.Slack.Events.Handlers
@@ -19,18 +18,17 @@ namespace RabbitSharp.Slack.Events.Handlers
                 throw new ArgumentNullException(nameof(context));
             }
 
-            await context.FetchEventAttributesAsync();
-
-            if (context.EventAttributes is UrlVerification urlVerification)
+            var urlVerification = await context.GetUrlVerificationAttributes();
+            if (urlVerification is null)
             {
-                var httpContext = context.HttpContext;
-                httpContext.Response.StatusCode = StatusCodes.Status200OK;
-                httpContext.Response.ContentType = ContentTypePlainText;
-                await httpContext.Response.WriteAsync(urlVerification.Challenge);
-                return SlackEventHandlerResult.EndResponse();
+                return SlackEventHandlerResult.NoResult();
             }
 
-            return SlackEventHandlerResult.NoResult();
+            var httpContext = context.HttpContext;
+            httpContext.Response.StatusCode = StatusCodes.Status200OK;
+            httpContext.Response.ContentType = ContentTypePlainText;
+            await httpContext.Response.WriteAsync(urlVerification.Challenge);
+            return SlackEventHandlerResult.EndResponse();
         }
     }
 }

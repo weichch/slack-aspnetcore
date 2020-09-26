@@ -1,13 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup Condition="'$(RabbitSharpPackageType)'=='CurrentVersion'">
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(RabbitSharpPackageType)'!='CurrentVersion'">
-    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
-  </PropertyGroup>
-
   <PropertyGroup>
     <PackageId>RabbitSharp.Slack.EventHandler.AspNetCore</PackageId>
     <PackageTags>slack;event-api;aspnetcore;.net;core;event;handler</PackageTags>

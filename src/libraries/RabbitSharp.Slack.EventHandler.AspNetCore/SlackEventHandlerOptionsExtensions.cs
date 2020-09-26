@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using RabbitSharp.Slack.Events.Handlers;
-using RabbitSharp.Slack.Events.Models;
 
 namespace RabbitSharp.Slack.Events
 {
@@ -58,11 +58,11 @@ namespace RabbitSharp.Slack.Events
         /// <param name="location">The new location.</param>
         public static SlackEventHandlerOptions AddRedirect(
             this SlackEventHandlerOptions options,
-            Predicate<EventWrapper> predicate,
+            Predicate<SlackEventContext> predicate,
             Uri location)
         {
             SlackEventHandlerResult.EnsureRedirectLocation(location);
-            return options.AddRedirect(predicate, _ => location);
+            return options.AddRedirect(predicate, _ => new ValueTask<Uri>(location));
         }
 
         /// <summary>
@@ -73,8 +73,28 @@ namespace RabbitSharp.Slack.Events
         /// <param name="locationBuilder">The new location builder.</param>
         public static SlackEventHandlerOptions AddRedirect(
             this SlackEventHandlerOptions options,
-            Predicate<EventWrapper> predicate,
-            Func<EventWrapper, Uri> locationBuilder)
+            Predicate<SlackEventContext> predicate,
+            Func<SlackEventContext, Uri> locationBuilder)
+        {
+            if (locationBuilder == null)
+            {
+                throw new ArgumentNullException(nameof(locationBuilder));
+            }
+
+            return options.AddRedirect(predicate, context =>
+                new ValueTask<Uri>(locationBuilder(context)));
+        }
+
+        /// <summary>
+        /// Adds event handler which redirects request to a new location when event meets criteria.
+        /// </summary>
+        /// <param name="options">The options.</param>
+        /// <param name="predicate">The predicate function.</param>
+        /// <param name="locationBuilder">The new location builder.</param>
+        public static SlackEventHandlerOptions AddRedirect(
+            this SlackEventHandlerOptions options,
+            Predicate<SlackEventContext> predicate,
+            Func<SlackEventContext, ValueTask<Uri>> locationBuilder)
         {
             if (options == null)
             {
@@ -107,19 +127,7 @@ namespace RabbitSharp.Slack.Events
             string eventType,
             Uri location)
         {
-            if (options == null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
-
-            if (eventType == null)
-            {
-                throw new ArgumentNullException(nameof(eventType));
-            }
-
-            SlackEventHandlerResult.EnsureRedirectLocation(location);
-            options.EventsHandlers.Add(new RedirectEventTypeEventHandler(eventType, location));
-            return options;
+            return options.AddRedirect(context => context.EventTypeEquals(eventType), location);
         }
 
         /// <summary>
@@ -131,10 +139,10 @@ namespace RabbitSharp.Slack.Events
         /// <param name="newPath">The new path.</param>
         public static SlackEventHandlerOptions AddRewrite(
             this SlackEventHandlerOptions options,
-            Predicate<EventWrapper> predicate,
+            Predicate<SlackEventContext> predicate,
             PathString newPath)
         {
-            return options.AddRewrite(predicate, (context, evt) => newPath);
+            return options.AddRewrite(predicate, _ => new ValueTask<PathString>(newPath));
         }
 
         /// <summary>
@@ -146,8 +154,29 @@ namespace RabbitSharp.Slack.Events
         /// <param name="pathBuilder">The path builder.</param>
         public static SlackEventHandlerOptions AddRewrite(
             this SlackEventHandlerOptions options,
-            Predicate<EventWrapper> predicate,
-            Func<SlackEventContext, EventWrapper, PathString> pathBuilder)
+            Predicate<SlackEventContext> predicate,
+            Func<SlackEventContext, PathString> pathBuilder)
+        {
+            if (pathBuilder == null)
+            {
+                throw new ArgumentNullException(nameof(pathBuilder));
+            }
+
+            return options.AddRewrite(predicate, context =>
+                new ValueTask<PathString>(pathBuilder(context)));
+        }
+
+        /// <summary>
+        /// Adds event handler which rewrites request to a new path within the base path of the application
+        /// when event meets criteria.
+        /// </summary>
+        /// <param name="options">The options.</param>
+        /// <param name="predicate">The predicate function.</param>
+        /// <param name="pathBuilder">The path builder.</param>
+        public static SlackEventHandlerOptions AddRewrite(
+            this SlackEventHandlerOptions options,
+            Predicate<SlackEventContext> predicate,
+            Func<SlackEventContext, ValueTask<PathString>> pathBuilder)
         {
             if (options == null)
             {
@@ -180,38 +209,94 @@ namespace RabbitSharp.Slack.Events
             string eventType,
             PathString newPath)
         {
-            return options.AddEventTypeRewrite(eventType, _ => newPath);
+            return options.AddRewrite(
+                context => context.EventTypeEquals(eventType),
+                _ => new ValueTask<PathString>(newPath));
         }
 
         /// <summary>
-        /// Adds event handler which rewrites request to a new path within the base path of the application
-        /// when event type is equal to specified event type.
+        /// Adds event handler which handles event in an HTTP request handler.
         /// </summary>
         /// <param name="options">The options.</param>
-        /// <param name="eventType">The target event type.</param>
-        /// <param name="pathBuilder">The path builder.</param>
-        public static SlackEventHandlerOptions AddEventTypeRewrite(
+        /// <param name="predicate">The predicate function.</param>
+        /// <param name="requestHandler">The request handler.</param>
+        public static SlackEventHandlerOptions AddRequestHandler(
             this SlackEventHandlerOptions options,
-            string eventType,
-            Func<SlackEventContext, PathString> pathBuilder)
+            Predicate<SlackEventContext> predicate,
+            RequestDelegate requestHandler)
         {
             if (options == null)
             {
                 throw new ArgumentNullException(nameof(options));
             }
 
-            if (eventType == null)
+            if (predicate == null)
             {
-                throw new ArgumentNullException(nameof(eventType));
+                throw new ArgumentNullException(nameof(predicate));
             }
 
-            if (pathBuilder == null)
+            if (requestHandler == null)
             {
-                throw new ArgumentNullException(nameof(pathBuilder));
+                throw new ArgumentNullException(nameof(requestHandler));
             }
 
-            options.EventsHandlers.Add(new RewriteEventTypeEventHandler(eventType, pathBuilder));
+            options.EventsHandlers.Add(new RequestDelegateEventHandler(predicate, requestHandler));
             return options;
+        }
+
+        /// <summary>
+        /// Adds event handler which handles event in an HTTP request handler.
+        /// </summary>
+        /// <param name="options">The options.</param>
+        /// <param name="predicate">The predicate function.</param>
+        /// <param name="requestHandlerBuilder">The request handler builder.</param>
+        public static SlackEventHandlerOptions AddRequestHandler(
+            this SlackEventHandlerOptions options,
+            Predicate<SlackEventContext> predicate,
+            Action<IApplicationBuilder> requestHandlerBuilder)
+        {
+            if (requestHandlerBuilder == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandlerBuilder));
+            }
+
+            var appBuilder = options.ApplicationBuilder.New();
+            requestHandlerBuilder(appBuilder);
+            var requestHandler = appBuilder.Build();
+
+            return options.AddRequestHandler(predicate, requestHandler);
+        }
+
+        /// <summary>
+        /// Adds event handler which handles event in an HTTP request handler.
+        /// </summary>
+        /// <param name="options">The options.</param>
+        /// <param name="eventType">The target event type.</param>
+        /// <param name="requestHandler">The request handler.</param>
+        public static SlackEventHandlerOptions AddEventTypeRequestHandler(
+            this SlackEventHandlerOptions options,
+            string eventType,
+            RequestDelegate requestHandler)
+        {
+            return options.AddRequestHandler(
+                context => context.EventTypeEquals(eventType),
+                requestHandler);
+        }
+
+        /// <summary>
+        /// Adds event handler which handles event in an HTTP request handler.
+        /// </summary>
+        /// <param name="options">The options.</param>
+        /// <param name="eventType">The target event type.</param>
+        /// <param name="requestHandlerBuilder">The request handler builder.</param>
+        public static SlackEventHandlerOptions AddEventTypeRequestHandler(
+            this SlackEventHandlerOptions options,
+            string eventType,
+            Action<IApplicationBuilder> requestHandlerBuilder)
+        {
+            return options.AddRequestHandler(
+                context => context.EventTypeEquals(eventType),
+                requestHandlerBuilder);
         }
     }
 }

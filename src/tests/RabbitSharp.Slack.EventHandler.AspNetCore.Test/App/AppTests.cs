@@ -54,17 +54,15 @@ namespace RabbitSharp.Slack.Events.Tests.App
             IHostEnvironment env,
             IConfiguration configuration)
         {
-            var slackEventHandlerOptions = new SlackEventHandlerOptions
+            app.UseSlackEventHandler(opt =>
             {
-                CallbackPath = "/slack/event-hub",
-                RequestValidationParameters = new SlackRequestValidationParameters
+                opt.CallbackPath = "/slack/event-hub";
+                opt.RequestValidationParameters = new SlackRequestValidationParameters
                 {
                     SigningSecretProvider = _ => SigningSecret
-                }
-            };
-            ConfigureSlackEventHandler(slackEventHandlerOptions);
-
-            app.UseSlackEventHandler(slackEventHandlerOptions);
+                };
+                ConfigureSlackEventHandler(opt);
+            });
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {

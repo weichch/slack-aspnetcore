@@ -30,7 +30,7 @@ namespace RabbitSharp.Slack.Events.Tests.Tests
 
             var result = JsonSerializer.Deserialize<EventWrapper>(buffer.AsSpan(), serializerOptions);
 
-            Assert.True(result.Extensions.Count > 0);
+            Assert.True(result!.Extensions.Count > 0);
         }
 
         [Fact]

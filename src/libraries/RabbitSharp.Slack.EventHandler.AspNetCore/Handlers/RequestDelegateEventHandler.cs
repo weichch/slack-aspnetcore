@@ -1,22 +1,23 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace RabbitSharp.Slack.Events.Handlers
 {
     /// <summary>
-    /// Implements <see cref="ISlackEventHandler"/> by redirecting current HTTP request.
+    /// Implements <see cref="ISlackEventHandler"/> by using a <see cref="RequestDelegate"/> to handle event.
     /// </summary>
-    class RedirectRequestEventHandler : ISlackEventHandler
+    class RequestDelegateEventHandler : ISlackEventHandler
     {
         private readonly Predicate<SlackEventContext> _predicate;
-        private readonly Func<SlackEventContext, ValueTask<Uri>> _locationBuilder;
+        private readonly RequestDelegate _requestHandler;
 
-        public RedirectRequestEventHandler(
-            Predicate<SlackEventContext> predicate, 
-            Func<SlackEventContext, ValueTask<Uri>> locationBuilder)
+        public RequestDelegateEventHandler(
+            Predicate<SlackEventContext> predicate,
+            RequestDelegate requestHandler)
         {
             _predicate = predicate;
-            _locationBuilder = locationBuilder;
+            _requestHandler = requestHandler;
         }
 
         public async ValueTask<SlackEventHandlerResult> HandleAsync(SlackEventContext context)
@@ -31,8 +32,8 @@ namespace RabbitSharp.Slack.Events.Handlers
                 return SlackEventHandlerResult.NoResult();
             }
 
-            var location = await _locationBuilder(context);
-            return SlackEventHandlerResult.Redirect(location);
+            await _requestHandler(context.HttpContext);
+            return SlackEventHandlerResult.EndResponse();
         }
     }
 }

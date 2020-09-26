@@ -85,7 +85,7 @@ namespace RabbitSharp.Slack.Events
                 return;
             }
 
-            var feature = ProvisionFeatures(httpContext);
+            ProvisionFeatures(httpContext);
             var request = httpContext.Request;
             request.EnableBuffering();
 
@@ -97,8 +97,8 @@ namespace RabbitSharp.Slack.Events
             }
 
             // Handle request in event handlers
-            var eventContext = new SlackEventContext(httpContext, feature.EventAttributesProvider);
-            await eventContext.FetchEventTypesAsync();
+            var eventContext = SlackEventContext.CreateFromHttpContext(httpContext);
+            eventContext.FetchEventTypes();
 
             SlackEventHandlerResult result = default;
             foreach (var eventHandler in _options.EventsHandlers)
@@ -181,7 +181,7 @@ namespace RabbitSharp.Slack.Events
         /// Sets per-request services used by request validator and event handlers.
         /// </summary>
         /// <param name="httpContext">The HTTP context.</param>
-        private SlackEventHandlerFeature ProvisionFeatures(HttpContext httpContext)
+        private void ProvisionFeatures(HttpContext httpContext)
         {
             var feature = new SlackEventHandlerFeature
             {
@@ -194,8 +194,6 @@ namespace RabbitSharp.Slack.Events
 
             httpContext.Features.Set<ISlackEventHandlerServicesFeature>(feature);
             httpContext.Features.Set<ISlackRequestVerificationFeature>(feature);
-
-            return feature;
         }
 
         /// <summary>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -15,11 +16,22 @@ namespace RabbitSharp.Slack.Events
     /// </summary>
     public class SlackEventHandlerOptions
     {
+        private readonly IApplicationBuilder? _applicationBuilder;
+
         /// <summary>
         /// Creates an instance of the options.
         /// </summary>
         public SlackEventHandlerOptions()
+            : this(null)
         {
+        }
+
+        /// <summary>
+        /// Creates an instance of the options.
+        /// </summary>
+        public SlackEventHandlerOptions(IApplicationBuilder? app)
+        {
+            _applicationBuilder = app;
             CallbackPath = "/slack/events";
             EventsHandlers = new List<ISlackEventHandler>();
 
@@ -35,6 +47,23 @@ namespace RabbitSharp.Slack.Events
                 SlackEventHandlerConstants.ContentTypeApplicationJson
             };
             InternalLogLevel = LogLevel.Trace;
+        }
+
+        /// <summary>
+        /// Gets the application builder.
+        /// </summary>
+        public IApplicationBuilder ApplicationBuilder
+        {
+            get
+            {
+                if (_applicationBuilder == null)
+                {
+                    throw new InvalidOperationException(
+                        "No application builder set. Use 'SlackEventHandlerOptions(IApplicationBuilder)' constructor.");
+                }
+
+                return _applicationBuilder;
+            }
         }
 
         /// <summary>

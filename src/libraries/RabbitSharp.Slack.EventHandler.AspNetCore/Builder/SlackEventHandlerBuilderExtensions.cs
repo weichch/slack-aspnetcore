@@ -30,32 +30,8 @@ namespace Microsoft.AspNetCore.Builder
                 throw new ArgumentNullException(nameof(optionsBuilder));
             }
 
-            var options = new SlackEventHandlerOptions();
+            var options = new SlackEventHandlerOptions(app);
             optionsBuilder.Invoke(options);
-            return app.UseSlackEventHandler(options);
-        }
-
-        /// <summary>
-        /// Adds a middleware which receives event notification requests from Slack, verify them,
-        /// and re-execute them in alternative request pipeline. This middleware does not handle
-        /// request if response has started.
-        /// </summary>
-        /// <param name="app">The application builder.</param>
-        /// <param name="options">The options.</param>
-        public static IApplicationBuilder UseSlackEventHandler(
-            this IApplicationBuilder app,
-            SlackEventHandlerOptions options)
-        {
-            if (app == null)
-            {
-                throw new ArgumentNullException(nameof(app));
-            }
-
-            if (options == null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
-
             return app.UseMiddleware<SlackEventHandlerMiddleware>(Options.Create(options));
         }
     }
